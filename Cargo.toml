@@ -1,0 +1,27 @@
+[package]
+name = "line_chart"
+version = "0.0.0"
+edition = "2021"
+authors = ["John Lyon-Smith <john@lyon-smith.org>"]
+description = "An SVG line chart generation tool"
+repository = "https://github.com/jlyonsmith/line-chart"
+readme = "README.md"
+keywords = []
+categories = []
+license = "Unlicense"
+
+[dependencies]
+clap = { version = "3.0.14", features = ["derive"] }
+colored = "^2.0.0"
+lazy_static = "1.4.0"
+
+[dev-dependencies]
+criterion = "^0.3"
+
+[[bench]]
+name = "benchmarks"
+harness = false
+
+[[bin]]
+name = "line-chart"
+path = "src/bin/line_chart.rs"
