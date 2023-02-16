@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="410" height="520" viewBox="0 0 410 520" style="background-color: white;">
+	<style>
+.line{fill:none;stroke:rgb(0,0,200);stroke-width:2;}
+.axis{fill:none;stroke:rgb(0,0,0);stroke-width:1;}
+.labels{fill:rgb(0,0,0);font-size:10;font-family:Arial}
+.y-labels{text-anchor:end;}
+.title{font-family:Arial;font-size:12;text-anchor:middle;}
+	</style>
+	<polyline class="axis" points="80,40 80,440 330,440 "/>
+	<g class="labels">
+		<text transform="translate(105,455) rotate(45)">
+2023-05-01
+		</text>
+		<text transform="translate(155,455) rotate(45)">
+2023-05-02
+		</text>
+		<text transform="translate(205,455) rotate(45)">
+2023-05-03
+		</text>
+		<text transform="translate(255,455) rotate(45)">
+2023-05-04
+		</text>
+		<text transform="translate(305,455) rotate(45)">
+2023-05-05
+		</text>
+	</g>
+	<g class="labels y-labels">
+		<text transform="translate(70,445)">
+100
+		</text>
+		<text transform="translate(70,425)">
+105
+		</text>
+		<text transform="translate(70,405)">
+110
+		</text>
+		<text transform="translate(70,385)">
+115
+		</text>
+		<text transform="translate(70,365)">
+120
+		</text>
+		<text transform="translate(70,345)">
+125
+		</text>
+		<text transform="translate(70,325)">
+130
+		</text>
+		<text transform="translate(70,305)">
+135
+		</text>
+		<text transform="translate(70,285)">
+140
+		</text>
+		<text transform="translate(70,265)">
+145
+		</text>
+		<text transform="translate(70,245)">
+150
+		</text>
+		<text transform="translate(70,225)">
+155
+		</text>
+		<text transform="translate(70,205)">
+160
+		</text>
+		<text transform="translate(70,185)">
+165
+		</text>
+		<text transform="translate(70,165)">
+170
+		</text>
+		<text transform="translate(70,145)">
+175
+		</text>
+		<text transform="translate(70,125)">
+180
+		</text>
+		<text transform="translate(70,105)">
+185
+		</text>
+		<text transform="translate(70,85)">
+190
+		</text>
+		<text transform="translate(70,65)">
+195
+		</text>
+		<text transform="translate(70,45)">
+200
+		</text>
+	</g>
+	<path class="line" d=" M 105 440 L 155 360 L 205 40 L 255 120 L 305 160">
+	</path>
+	<text class="title" x="205" y="20">
+Monthly Cost ($)
+	</text>
+</svg>
