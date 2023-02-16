@@ -8,4 +8,4 @@ An SVG line chart generation tool.  Here is some sample output:
 
 ![Monthly Costs Output](example/example.svg)
 
-Install the tool with `cargo install line-chart`.  Run the tool with `line-chart`.
+Install the tool with `cargo install line_chart`.  Run the tool with `line-chart`.
