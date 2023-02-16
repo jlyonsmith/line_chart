@@ -375,7 +375,7 @@ checksum = "db6d7e329c562c5dfab7a46a2afabc8b987ab9a4834c9d1ca04dc54c1546cef8"
 
 [[package]]
 name = "line_chart"
-version = "0.0.0"
+version = "1.0.0"
 dependencies = [
  "clap 3.2.23",
  "colored",
