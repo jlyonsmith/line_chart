@@ -3,13 +3,16 @@ mod log_macros;
 use clap::Parser;
 use core::fmt::Arguments;
 use easy_error::{self, ResultExt};
-use hypermelon::{attr::PathCommand::*, build, prelude::*};
 use serde::Deserialize;
 use std::{
     error::Error,
     fs::File,
     io::{self, Read, Write},
     path::PathBuf,
+};
+use svg::{
+    node::{element::path::*, *},
+    Document,
 };
 
 pub trait LineChartLog {
@@ -112,9 +115,9 @@ impl<'a> LineChartTool<'a> {
 
         let chart_data = Self::read_chart_file(cli.get_input()?)?;
         let render_data = self.process_chart_data(&chart_data)?;
-        let output = self.render_chart(&render_data)?;
+        let document = self.render_chart(&render_data)?;
 
-        Self::write_svg_file(cli.get_output()?, &output)?;
+        Self::write_svg_file(cli.get_output()?, &document)?;
 
         Ok(())
     }
@@ -129,8 +132,8 @@ impl<'a> LineChartTool<'a> {
         Ok(chart_data)
     }
 
-    fn write_svg_file(mut writer: Box<dyn Write>, output: &str) -> Result<(), Box<dyn Error>> {
-        write!(writer, "{}", output)?;
+    fn write_svg_file(writer: Box<dyn Write>, document: &Document) -> Result<(), Box<dyn Error>> {
+        svg::write(writer, document)?;
 
         Ok(())
     }
@@ -188,98 +191,91 @@ impl<'a> LineChartTool<'a> {
         })
     }
 
-    fn render_chart(self: &Self, rd: &RenderData) -> Result<String, Box<dyn Error>> {
+    fn render_chart(self: &Self, rd: &RenderData) -> Result<Document, Box<dyn Error>> {
         let width = rd.gutter.left + ((rd.tuples.len() as f64) * rd.plot_width) + rd.gutter.right;
         let height = rd.gutter.top + rd.gutter.bottom + rd.y_axis_height;
         let y_range = ((rd.y_axis_range.1 - rd.y_axis_range.0) / rd.y_axis_interval) as usize;
         let y_scale = rd.y_axis_height / (rd.y_axis_range.1 - rd.y_axis_range.0);
         let scale =
             |n: &f64| -> f64 { height - rd.gutter.bottom - (n - rd.y_axis_range.0) * y_scale };
-        let style = build::elem("style").append(build::from_iter(rd.styles.iter()));
-
-        let svg = build::elem("svg").with(attrs!(
-            ("xmlns", "http://www.w3.org/2000/svg"),
-            ("width", width),
-            ("height", height),
-            ("viewBox", format_move!("0 0 {} {}", width, height)),
-            ("style", "background-color: white;")
-        ));
-
-        let axis = build::single("polyline").with(attrs!(
-            ("class", "axis"),
-            build::points([
+        let mut document = Document::new()
+            .set("xmlns", "http://www.w3.org/2000/svg")
+            .set("width", width)
+            .set("height", height)
+            .set("viewBox", format!("0 0 {} {}", width, height))
+            .set("style", "background-color: white;");
+        let style = element::Style::new(rd.styles.join("\n"));
+        let axis = element::Polyline::new().set("class", "axis").set(
+            "points",
+            vec![
                 (rd.gutter.left, rd.gutter.top),
                 (rd.gutter.left, rd.gutter.top + rd.y_axis_height),
                 (width - rd.gutter.right, rd.gutter.top + rd.y_axis_height),
-            ])
-        ));
-        let x_axis_labels = build::elem("g")
-            .with(("class", "labels"))
-            .append(build::from_iter((0..rd.tuples.len()).map(|i| {
-                build::elem("text")
-                    .with(attrs!((
-                        "transform",
-                        format_move!(
-                            "translate({},{}) rotate(45)",
-                            rd.gutter.left + (i as f64 * rd.plot_width) + rd.plot_width / 2.0,
-                            height - rd.gutter.bottom + 15.0
-                        )
-                    )))
-                    .append(format_move!("{}", rd.tuples[i].0))
-            })));
+            ],
+        );
+        let mut x_axis_labels = element::Group::new().set("class", "labels");
 
-        let y_axis_labels =
-            build::elem("g")
-                .with(("class", "labels y-labels"))
-                .append(build::from_iter((0..=y_range).map(|i| {
-                    let n = i as f64 * rd.y_axis_interval;
+        for i in 0..rd.tuples.len() {
+            x_axis_labels.append(element::Text::new(format!("{}", rd.tuples[i].0)).set(
+                "transform",
+                format!(
+                    "translate({},{}) rotate(45)",
+                    rd.gutter.left + (i as f64 * rd.plot_width) + rd.plot_width / 2.0,
+                    height - rd.gutter.bottom + 15.0
+                ),
+            ));
+        }
 
-                    build::elem("text")
-                        .with(attrs!((
-                            "transform",
-                            format_move!(
-                                "translate({},{})",
-                                rd.gutter.left - 10.0,
-                                height - rd.gutter.bottom - f64::floor(n * y_scale) + 5.0
-                            )
-                        )))
-                        .append(format_move!("{}", n + rd.y_axis_range.0))
-                })));
+        let mut y_axis_labels = element::Group::new().set("class", "labels y-labels");
 
-        let line = build::elem("path").with(attrs!(
-            ("class", "line"),
-            build::path(rd.tuples.iter().enumerate().map(|t| {
-                let x = rd.gutter.left + (t.0 as f64) * rd.plot_width + rd.plot_width / 2.0;
-                let y = scale(&(*t.1).1);
+        for i in 0..=y_range {
+            let n = i as f64 * rd.y_axis_interval;
 
-                if t.0 == 0 {
-                    M(x, y)
-                } else {
-                    L(x, y)
-                }
-            }))
-        ));
+            y_axis_labels.append(
+                element::Text::new(format!("{}", n + rd.y_axis_range.0)).set(
+                    "transform",
+                    format!(
+                        "translate({},{})",
+                        rd.gutter.left - 10.0,
+                        height - rd.gutter.bottom - f64::floor(n * y_scale) + 5.0
+                    ),
+                ),
+            );
+        }
 
-        let title = build::elem("text")
-            .with(attrs!(
-                ("class", "title"),
-                ("x", width / 2.0),
-                ("y", rd.gutter.top / 2.0)
-            ))
-            .append(format_move!("{} ({})", &rd.title, &rd.units));
+        let line = element::Path::new().set("class", "line").set(
+            "d",
+            Data::from(
+                rd.tuples
+                    .iter()
+                    .enumerate()
+                    .map(|t| {
+                        let x = rd.gutter.left + (t.0 as f64) * rd.plot_width + rd.plot_width / 2.0;
+                        let y = scale(&(*t.1).1);
 
-        let mut output = String::new();
-        let all = svg
-            .append(style)
-            .append(axis)
-            .append(x_axis_labels)
-            .append(y_axis_labels)
-            .append(line)
-            .append(title);
+                        if t.0 == 0 {
+                            Command::Move(Position::Absolute, Parameters::from((x, y)))
+                        } else {
+                            Command::Line(Position::Absolute, Parameters::from((x, y)))
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+        );
 
-        hypermelon::render(all, &mut output)?;
+        let title = element::Text::new(format!("{} ({})", &rd.title, &rd.units))
+            .set("class", "title")
+            .set("x", width / 2.0)
+            .set("y", rd.gutter.top / 2.0);
 
-        Ok(output)
+        document.append(style);
+        document.append(axis);
+        document.append(x_axis_labels);
+        document.append(y_axis_labels);
+        document.append(line);
+        document.append(title);
+
+        Ok(document)
     }
 }
 
