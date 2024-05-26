@@ -10,10 +10,7 @@ use std::{
     io::{self, Read, Write},
     path::PathBuf,
 };
-use svg::{
-    node::{element::path::*, *},
-    Document,
-};
+use svg::{node::element::*, node::*, Document};
 
 pub trait LineChartLog {
     fn output(self: &Self, args: Arguments);
@@ -245,7 +242,7 @@ impl<'a> LineChartTool<'a> {
 
         let line = element::Path::new().set("class", "line").set(
             "d",
-            Data::from(
+            path::Data::from(
                 rd.tuples
                     .iter()
                     .enumerate()
@@ -254,9 +251,15 @@ impl<'a> LineChartTool<'a> {
                         let y = scale(&(*t.1).1);
 
                         if t.0 == 0 {
-                            Command::Move(Position::Absolute, Parameters::from((x, y)))
+                            path::Command::Move(
+                                path::Position::Absolute,
+                                path::Parameters::from((x, y)),
+                            )
                         } else {
-                            Command::Line(Position::Absolute, Parameters::from((x, y)))
+                            path::Command::Line(
+                                path::Position::Absolute,
+                                path::Parameters::from((x, y)),
+                            )
                         }
                     })
                     .collect::<Vec<_>>(),
