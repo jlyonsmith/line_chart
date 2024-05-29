@@ -191,10 +191,9 @@ impl<'a> LineChartTool<'a> {
     fn render_chart(self: &Self, rd: &RenderData) -> Result<Document, Box<dyn Error>> {
         let width = rd.gutter.left + ((rd.tuples.len() as f64) * rd.plot_width) + rd.gutter.right;
         let height = rd.gutter.top + rd.gutter.bottom + rd.y_axis_height;
-        let y_range = ((rd.y_axis_range.1 - rd.y_axis_range.0) / rd.y_axis_interval) as usize;
-        let y_scale = rd.y_axis_height / (rd.y_axis_range.1 - rd.y_axis_range.0);
-        let scale =
-            |n: &f64| -> f64 { height - rd.gutter.bottom - (n - rd.y_axis_range.0) * y_scale };
+        let num_y_labels = ((rd.y_axis_range.1 - rd.y_axis_range.0) / rd.y_axis_interval) as usize;
+        let y_scale =
+            |n: f64| -> f64 { n * rd.y_axis_height / (rd.y_axis_range.1 - rd.y_axis_range.0) };
         let mut document = Document::new()
             .set("xmlns", "http://www.w3.org/2000/svg")
             .set("width", width)
@@ -218,14 +217,14 @@ impl<'a> LineChartTool<'a> {
                 format!(
                     "translate({},{}) rotate(45)",
                     rd.gutter.left + (i as f64 * rd.plot_width) + rd.plot_width / 2.0,
-                    height - rd.gutter.bottom + 15.0
+                    rd.gutter.top + rd.y_axis_height + 15.0
                 ),
             ));
         }
 
         let mut y_axis_labels = element::Group::new().set("class", "labels y-labels");
 
-        for i in 0..=y_range {
+        for i in 0..=num_y_labels {
             let n = i as f64 * rd.y_axis_interval;
 
             y_axis_labels.append(
@@ -234,7 +233,7 @@ impl<'a> LineChartTool<'a> {
                     format!(
                         "translate({},{})",
                         rd.gutter.left - 10.0,
-                        height - rd.gutter.bottom - f64::floor(n * y_scale) + 5.0
+                        rd.gutter.top + rd.y_axis_height - f64::floor(y_scale(n)) + 5.0
                     ),
                 ),
             );
@@ -242,28 +241,20 @@ impl<'a> LineChartTool<'a> {
 
         let line = element::Path::new().set("class", "line").set(
             "d",
-            path::Data::from(
-                rd.tuples
-                    .iter()
-                    .enumerate()
-                    .map(|t| {
-                        let x = rd.gutter.left + (t.0 as f64) * rd.plot_width + rd.plot_width / 2.0;
-                        let y = scale(&(*t.1).1);
+            rd.tuples
+                .iter()
+                .enumerate()
+                .fold(path::Data::new(), |data, tuple| {
+                    let x = rd.gutter.left + (tuple.0 as f64) * rd.plot_width + rd.plot_width / 2.0;
+                    let y = rd.gutter.top + rd.y_axis_height
+                        - y_scale((*tuple.1).1 - rd.y_axis_range.0);
 
-                        if t.0 == 0 {
-                            path::Command::Move(
-                                path::Position::Absolute,
-                                path::Parameters::from((x, y)),
-                            )
-                        } else {
-                            path::Command::Line(
-                                path::Position::Absolute,
-                                path::Parameters::from((x, y)),
-                            )
-                        }
-                    })
-                    .collect::<Vec<_>>(),
-            ),
+                    if tuple.0 == 0 {
+                        data.move_to((x, y))
+                    } else {
+                        data.line_to((x, y))
+                    }
+                }),
         );
 
         let title = element::Text::new(format!("{} ({})", &rd.title, &rd.units))
